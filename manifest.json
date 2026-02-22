@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AI Ethics Monitor",
+  "name": "VeriAI - Ethical Aligner and Verifier",
   "version": "1.0.0",
   "description": "Universal Conversational AI Ethical Alignment & Chain-of-Thought Monitor",
   
@@ -17,11 +17,19 @@
     "https://copilot.microsoft.com/*",
     "https://gemini.google.com/*",
     "https://bard.google.com/*",
-    "https://claude.ai/*"
+    "https://claude.ai/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.deepseek.com/*",
+    "https://openrouter.ai/*"
   ],
   
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
+  },
+  
   "background": {
-    "service_worker": "dist/background.js"
+    "service_worker": "background.js"
   },
   
   "content_scripts": [
@@ -34,14 +42,14 @@
         "https://bard.google.com/*",
         "https://claude.ai/*"
       ],
-      "js": ["dist/content.js"],
-      "css": ["dist/content.css"],
+      "js": ["vendors.js", "content.js"],
+      "css": ["content.css"],
       "run_at": "document_end"
     }
   ],
   
   "action": {
-    "default_popup": "dist/popup.html",
+    "default_popup": "popup.html",
     "default_title": "AI Ethics Monitor",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -60,7 +68,7 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["dist/*", "icons/*"],
+      "resources": ["*.js", "*.css", "icons/*"],
       "matches": ["<all_urls>"]
     }
   ]

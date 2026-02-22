@@ -80,6 +80,16 @@ export interface ContentFlag {
   textSpan: TextSpan;
 }
 
+// Sentence-wise bias analysis
+export interface SentenceBiasAnalysis {
+  sentenceNumber: number;
+  text: string;
+  biasTypes: BiasType[];
+  patterns: BiasPattern[];
+  severity: RiskLevel;
+  hasBias: boolean;
+}
+
 // User feedback and community system
 export interface UserFeedback {
   responseId: string;
@@ -162,4 +172,64 @@ export interface AnalysisSettings {
   biasDetectionSensitivity: 'low' | 'medium' | 'high';
   enabledBiasTypes: BiasType[];
   autoFlagThreshold: RiskLevel;
+}
+
+// Cross-Model Verification types
+export interface CrossModelVerificationRequest {
+  userQuestion: string;
+  aiResponse: string;
+  sourcePlatform: SupportedPlatform;
+  responseMetadata?: ResponseMetadata;
+}
+
+export interface CrossModelVerificationResult {
+  bias: BiasVerification;
+  hallucinationRisk: number; // 0-1 scale
+  manipulationRisk: number; // 0-1 scale
+  reasoningQuality: number; // 0-1 scale
+  trustScore: number; // 0-100 scale
+  finalVerdict: 'safe' | 'questionable' | 'unsafe';
+  recommendations: string[];
+  verifiedBy: 'gemini-1.5-pro';
+  timestamp: Date;
+}
+
+export interface BiasVerification {
+  genderBias: { detected: boolean; severity: number; examples: string[] };
+  racialBias: { detected: boolean; severity: number; examples: string[] };
+  culturalBias: { detected: boolean; severity: number; examples: string[] };
+  politicalBias: { detected: boolean; severity: number; examples: string[] };
+  overallBiasScore: number; // 0-1 scale
+}
+
+// Cross-AI Verification & Optimization Engine types
+export interface ModelResponse {
+  answer: string;
+  responseTime: number;
+  model: string;
+  error?: string;
+}
+
+export interface CrossAIVerificationRequest {
+  question: string;
+  originalAnswer: string;
+  sourcePlatform: SupportedPlatform;
+}
+
+export interface CrossAIVerificationResult {
+  finalAnswer: string;
+  consistencyScore: number; // 0-100
+  completenessScore: number; // 0-100
+  biasRiskScore: number; // 0-100
+  bestModel: string;
+  modelNotes: Record<string, string>;
+  comparativeAnalysis: {
+    agreements: string[];
+    contradictions: string[];
+    uniqueInsights: string[];
+    commonWeaknesses: string[];
+  };
+  recommendations: string[];
+  modelResponses: Record<string, ModelResponse>;
+  timestamp: Date;
 }

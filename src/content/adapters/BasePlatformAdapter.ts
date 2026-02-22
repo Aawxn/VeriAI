@@ -10,6 +10,20 @@ export class BasePlatformAdapter {
   protected responseCallback: ((response: AIResponse) => void) | null = null;
   
   /**
+   * Detect new AI responses (default implementation)
+   */
+  public detectNewResponse(): AIResponse | null {
+    return this.detectAIResponse();
+  }
+  
+  /**
+   * Force detect latest response (re-analyze current response)
+   */
+  public forceDetectLatest(): AIResponse | null {
+    return null;
+  }
+  
+  /**
    * Start monitoring for AI responses on the platform
    */
   public startMonitoring(callback: (response: AIResponse) => void): void {

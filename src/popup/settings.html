@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VeriAI Settings</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f1f3d 100%);
+      color: #e0e0e0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: #1a2332;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      color: #00d4ff;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #9ca3af;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .api-key-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #243447;
+      border-radius: 8px;
+      border-left: 4px solid #00d4ff;
+    }
+
+    .api-key-section h2 {
+      color: #ffffff;
+      font-size: 18px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .api-key-section.claude h2::before {
+      content: '🤖';
+    }
+
+    .api-key-section.gemini h2::before {
+      content: '✨';
+    }
+
+    .api-key-section.deepseek h2::before {
+      content: '🧠';
+    }
+
+    .description {
+      color: #9ca3af;
+      font-size: 13px;
+      margin-bottom: 15px;
+      line-height: 1.5;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      color: #b0b7c3;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: #1a2332;
+      border: 1px solid #3a4557;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 13px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      outline: none;
+      border-color: #00d4ff;
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #00d4ff;
+    }
+
+    .checkbox-group label {
+      margin: 0;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-save {
+      background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+      color: white;
+    }
+
+    .btn-save:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+    }
+
+    .btn-test {
+      background: #3a4557;
+      color: #e0e0e0;
+    }
+
+    .btn-test:hover {
+      background: #4a5567;
+    }
+
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid #3a4557;
+      color: #9ca3af;
+    }
+
+    .btn-cancel:hover {
+      border-color: #4a5567;
+      color: #e0e0e0;
+    }
+
+    .status-message {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .status-message.success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #4ade80;
+      display: block;
+    }
+
+    .status-message.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      display: block;
+    }
+
+    .info-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 30px;
+    }
+
+    .info-box h3 {
+      color: #60a5fa;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .info-box p {
+      color: #9ca3af;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .info-box a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+
+    .info-box a:hover {
+      text-decoration: underline;
+    }
+
+    .api-link {
+      display: inline-block;
+      margin-top: 8px;
+      color: #00d4ff;
+      text-decoration: none;
+      font-size: 12px;
+    }
+
+    .api-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚙️ VeriAI Settings</h1>
+    <p class="subtitle">Configure API keys for cross-AI verification</p>
+
+    <div class="info-box">
+      <h3>🔐 Privacy & Security</h3>
+      <p>
+        Your API keys are stored locally in Chrome's sync storage and are encrypted.
+        They are never sent to any third-party servers except the official AI provider APIs.
+        You can remove your keys at any time.
+      </p>
+    </div>
+
+    <!-- Claude API Settings -->
+    <div class="api-key-section claude">
+      <h2>Claude API</h2>
+      <p class="description">
+        Claude Sonnet 4 by Anthropic provides high-quality reasoning and analysis.
+        Used for both verification responses and meta-evaluation.
+      </p>
+      <div class="input-group">
+        <label for="claudeApiKey">Claude API Key</label>
+        <input type="password" id="claudeApiKey" placeholder="sk-ant-api03-...">
+        <a href="https://console.anthropic.com/account/keys" target="_blank" class="api-link">
+          → Get your Claude API key
+        </a>
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="useClaudeForVerification" checked>
+        <label for="useClaudeForVerification">Use Claude for cross-model verification</label>
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="useClaudeForMeta" checked>
+        <label for="useClaudeForMeta">Use Claude for meta-evaluation (recommended)</label>
+      </div>
+    </div>
+
+    <!-- Gemini API Settings -->
+    <div class="api-key-section gemini">
+      <h2>Google Gemini API</h2>
+      <p class="description">
+        Google Gemini 2.0 Flash provides fast, cost-effective verification.
+        Currently configured as the default verifier.
+      </p>
+      <div class="input-group">
+        <label for="geminiApiKey">Gemini API Key</label>
+        <input type="password" id="geminiApiKey" placeholder="AIzaSy...">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="api-link">
+          → Get your Gemini API key
+        </a>
+      </div>
+    </div>
+
+    <!-- DeepSeek API Settings -->
+    <div class="api-key-section deepseek">
+      <h2>DeepSeek API (Optional)</h2>
+      <p class="description">
+        DeepSeek provides additional verification perspective. This is optional.
+      </p>
+      <div class="input-group">
+        <label for="deepseekApiKey">DeepSeek API Key</label>
+        <input type="password" id="deepseekApiKey" placeholder="sk-...">
+        <a href="https://platform.deepseek.com/api_keys" target="_blank" class="api-link">
+          → Get your DeepSeek API key
+        </a>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button class="btn-save" id="saveBtn">💾 Save Settings</button>
+      <button class="btn-test" id="testBtn">🧪 Test APIs</button>
+      <button class="btn-cancel" id="cancelBtn">✕ Cancel</button>
+    </div>
+
+    <div class="status-message" id="statusMessage"></div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

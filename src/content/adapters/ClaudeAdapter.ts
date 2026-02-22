@@ -9,6 +9,13 @@ import { BasePlatformAdapter } from './BasePlatformAdapter';
 export class ClaudeAdapter extends BasePlatformAdapter {
   
   /**
+   * Wrapper method for detecting new AI responses
+   */
+  public detectNewResponse(): AIResponse | null {
+    return this.detectAIResponse();
+  }
+  
+  /**
    * Detect Claude AI responses using platform-specific selectors
    */
   protected detectAIResponse(): AIResponse | null {

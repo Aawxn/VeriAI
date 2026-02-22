@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -9,7 +10,8 @@ module.exports = (env, argv) => {
     entry: {
       background: './src/background/background.ts',
       content: ['./src/content/content.ts', './src/content/content.css'],
-      popup: './src/popup/popup.tsx'
+      popup: './src/popup/popup.tsx',
+      settings: './src/popup/settings.js'
     },
     
     output: {
@@ -51,8 +53,19 @@ module.exports = (env, argv) => {
         filename: 'popup.html',
         chunks: ['popup']
       }),
+      new HtmlWebpackPlugin({
+        template: './src/popup/settings.html',
+        filename: 'settings.html',
+        chunks: ['settings']
+      }),
       new MiniCssExtractPlugin({
         filename: '[name].css'
+      }),
+      new CopyWebpackPlugin({
+        patterns: [
+          { from: 'manifest.json', to: 'manifest.json' },
+          { from: 'icons', to: 'icons', noErrorOnMissing: true }
+        ]
       })
     ],
     

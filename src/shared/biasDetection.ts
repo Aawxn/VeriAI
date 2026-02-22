@@ -3,13 +3,13 @@
  * Analyzes text for various types of bias and ethical concerns
  */
 
-import { BiasAnalysis, BiasPattern, BiasType, ContentFlag, RiskLevel, TextSpan } from '../types';
+import { BiasAnalysis, BiasPattern, BiasType, ContentFlag, RiskLevel, TextSpan, SentenceBiasAnalysis } from '../types';
 import { BIAS_PATTERNS } from './constants';
 
 export class BiasDetectionEngine {
   
   /**
-   * Analyze text for bias and ethical concerns
+   * Analyze text for bias and ethical concerns (sentence-wise)
    */
   public analyzeText(text: string): BiasAnalysis {
     const detectedPatterns: BiasPattern[] = [];
@@ -48,43 +48,289 @@ export class BiasDetectionEngine {
       flaggedContent
     };
   }
+
+  /**
+   * Analyze text sentence-by-sentence for bias
+   * Returns detailed per-sentence analysis
+   */
+  public analyzeSentenceWise(text: string): SentenceBiasAnalysis[] {
+    const sentences = this.splitIntoSentences(text);
+    const results: SentenceBiasAnalysis[] = [];
+
+    sentences.forEach((sentence, index) => {
+      const sentencePatterns: BiasPattern[] = [];
+      
+      // Run detection on each sentence
+      sentencePatterns.push(...this.detectGenderBias(sentence));
+      sentencePatterns.push(...this.detectRacialBias(sentence));
+      sentencePatterns.push(...this.detectPoliticalBias(sentence));
+      sentencePatterns.push(...this.detectEmotionalManipulation(sentence));
+      sentencePatterns.push(...this.detectLogicalFallacies(sentence));
+      sentencePatterns.push(...this.detectEvasiveness(sentence));
+
+      // Filter to significant patterns only
+      const significantPatterns = sentencePatterns.filter(p => p.confidence >= 0.6);
+
+      // Calculate sentence-level severity
+      const maxConfidence = significantPatterns.length > 0 
+        ? Math.max(...significantPatterns.map(p => p.confidence))
+        : 0;
+
+      results.push({
+        sentenceNumber: index + 1,
+        text: sentence,
+        biasTypes: [...new Set(significantPatterns.map(p => p.type))],
+        patterns: significantPatterns,
+        severity: this.calculateSeverity(maxConfidence),
+        hasBias: significantPatterns.length > 0
+      });
+    });
+
+    return results;
+  }
+
+  /**
+   * Split text into sentences
+   */
+  private splitIntoSentences(text: string): string[] {
+    // Split on sentence boundaries: . ! ? followed by space or end of string
+    // Handle edge cases like "Dr." or "U.S."
+    const sentences = text
+      .replace(/([.!?])\s+/g, '$1|SPLIT|')
+      .split('|SPLIT|')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    return sentences;
+  }
   
   /**
-   * Detect gender bias in text
+   * Detect gender bias in text - Conservative approach
+   * Only flags when gender terms are combined with evaluative language or stereotypes
    */
   private detectGenderBias(text: string): BiasPattern[] {
     const patterns: BiasPattern[] = [];
-    const lowerText = text.toLowerCase();
     
-    // Gendered language patterns
-    const genderPatterns = [
-      { pattern: /\b(he|him|his)\b(?!\s+(or|\/)\s+(she|her))/gi, bias: 'male-centric language' },
-      { pattern: /\b(she|her|hers)\b(?!\s+(or|\/)\s+(he|him))/gi, bias: 'female-centric language' },
-      { pattern: /\b(mankind|manpower|man-made)\b/gi, bias: 'gendered terminology' },
-      { pattern: /\b(guys|dudes|bros)\b/gi, bias: 'male-defaulting terms' },
-      { pattern: /\b(emotional|nurturing|caring)\b.*\b(woman|women|female)\b/gi, bias: 'gender stereotyping' },
-      { pattern: /\b(aggressive|assertive|strong)\b.*\b(man|men|male)\b/gi, bias: 'gender stereotyping' }
+    // Define gender terms (explicit gender references only)
+    const genderTerms = {
+      male: ['he', 'him', 'his', 'man', 'men', 'male', 'males', 'guy', 'guys'],
+      female: ['she', 'her', 'hers', 'woman', 'women', 'female', 'females', 'girl', 'girls'],
+      neutral: ['they', 'them', 'their', 'person', 'people', 'individual', 'individuals']
+    };
+    
+    // Define evaluative verbs and phrases that suggest bias
+    const evaluativePatterns = [
+      'should', 'must', 'supposed to', 'ought to', 'need to', 'have to',
+      'better at', 'worse at', 'good at', 'bad at', 'excel at', 'struggle with',
+      'naturally', 'inherently', 'typically', 'usually', 'always', 'never',
+      'more likely to', 'less likely to', 'tend to', 'inclined to'
     ];
     
-    genderPatterns.forEach(({ pattern, bias }) => {
-      const matches = text.matchAll(pattern);
-      for (const match of matches) {
-        if (match.index !== undefined) {
-          patterns.push({
-            type: 'gender_bias',
-            confidence: 0.7,
-            textSpan: {
-              start: match.index,
-              end: match.index + match[0].length,
-              text: match[0]
-            },
-            explanation: `Potential gender bias detected: ${bias}`
+    // Define stereotype attributes
+    const stereotypeAttributes = {
+      traditional_male: ['aggressive', 'assertive', 'dominant', 'competitive', 'strong', 'logical', 'rational', 'unemotional', 'decisive', 'independent'],
+      traditional_female: ['emotional', 'nurturing', 'caring', 'sensitive', 'gentle', 'cooperative', 'supportive', 'empathetic', 'intuitive', 'dependent'],
+      professional_male: ['leader', 'ceo', 'engineer', 'developer', 'scientist', 'manager', 'executive'],
+      professional_female: ['nurse', 'teacher', 'secretary', 'assistant', 'caregiver', 'homemaker']
+    };
+    
+    // Convert text to lowercase for analysis but preserve original for spans
+    const lowerText = text.toLowerCase();
+    const words = text.split(/\s+/);
+    const lowerWords = lowerText.split(/\s+/);
+    
+    // Find all gender term positions
+    const genderPositions: Array<{
+      word: string;
+      index: number;
+      wordIndex: number;
+      type: 'male' | 'female';
+      originalText: string;
+    }> = [];
+    
+    lowerWords.forEach((word, wordIndex) => {
+      // Remove punctuation for matching
+      const cleanWord = word.replace(/[^\w]/g, '');
+      
+      if (genderTerms.male.includes(cleanWord)) {
+        const charIndex = text.toLowerCase().indexOf(word, wordIndex > 0 ? 
+          lowerWords.slice(0, wordIndex).join(' ').length + 1 : 0);
+        genderPositions.push({
+          word: cleanWord,
+          index: charIndex,
+          wordIndex,
+          type: 'male',
+          originalText: words[wordIndex]
+        });
+      } else if (genderTerms.female.includes(cleanWord)) {
+        const charIndex = text.toLowerCase().indexOf(word, wordIndex > 0 ? 
+          lowerWords.slice(0, wordIndex).join(' ').length + 1 : 0);
+        genderPositions.push({
+          word: cleanWord,
+          index: charIndex,
+          wordIndex,
+          type: 'female',
+          originalText: words[wordIndex]
+        });
+      }
+    });
+    
+    // For each gender term, check contextual window for bias patterns
+    genderPositions.forEach(genderPos => {
+      const windowStart = Math.max(0, genderPos.wordIndex - 8);
+      const windowEnd = Math.min(lowerWords.length, genderPos.wordIndex + 8);
+      const contextWindow = lowerWords.slice(windowStart, windowEnd);
+      const contextText = contextWindow.join(' ');
+      
+      let biasFound = false;
+      let biasType = '';
+      let confidence = 0;
+      let matchedPattern = '';
+      
+      // Check for evaluative language + stereotype combinations
+      evaluativePatterns.forEach(evalPattern => {
+        if (contextText.includes(evalPattern.toLowerCase())) {
+          // Check for stereotype attributes in the same context
+          Object.entries(stereotypeAttributes).forEach(([category, attributes]) => {
+            attributes.forEach(attribute => {
+              if (contextText.includes(attribute.toLowerCase())) {
+                // Determine if this is a stereotypical assignment
+                const isMaleStereotype = category.includes('male');
+                const isFemaleStereotype = category.includes('female');
+                
+                if ((genderPos.type === 'male' && isMaleStereotype) || 
+                    (genderPos.type === 'female' && isFemaleStereotype)) {
+                  biasFound = true;
+                  biasType = 'reinforcing gender stereotype';
+                  confidence = 0.85; // High confidence for clear stereotype reinforcement
+                  matchedPattern = `${genderPos.word} + ${evalPattern} + ${attribute}`;
+                } else if ((genderPos.type === 'male' && isFemaleStereotype) || 
+                           (genderPos.type === 'female' && isMaleStereotype)) {
+                  biasFound = true;
+                  biasType = 'contradicting gender stereotype';
+                  confidence = 0.75; // Slightly lower confidence
+                  matchedPattern = `${genderPos.word} + ${evalPattern} + ${attribute}`;
+                }
+              }
+            });
           });
+          
+          // Check for direct evaluative statements without stereotypes but with prescriptive language
+          if (!biasFound) {
+            const prescriptivePatterns = [
+              'should be', 'must be', 'supposed to be', 'ought to be',
+              'should do', 'must do', 'supposed to do', 'ought to do',
+              'should handle', 'must handle', 'supposed to handle', 'need to handle',
+              'should take care of', 'must take care of', 'supposed to take care of'
+            ];
+            
+            prescriptivePatterns.forEach(pattern => {
+              if (contextText.includes(pattern)) {
+                biasFound = true;
+                biasType = 'prescriptive gender role assignment';
+                confidence = 0.80;
+                matchedPattern = `${genderPos.word} + ${pattern}`;
+              }
+            });
+          }
+        }
+      });
+      
+      // Check for explicit comparisons between genders
+      if (!biasFound) {
+        const comparisonPatterns = [
+          /\b(men|males?|guys?)\s+(are\s+)?(better|worse|stronger|weaker|smarter|more|less)\s+.{0,20}\s+than\s+(women|females?|girls?)/gi,
+          /\b(women|females?|girls?)\s+(are\s+)?(better|worse|stronger|weaker|smarter|more|less)\s+.{0,20}\s+than\s+(men|males?|guys?)/gi,
+          /\b(men|males?|guys?)\s+(are\s+)?(more|less)\s+likely\s+to/gi,
+          /\b(women|females?|girls?)\s+(are\s+)?(more|less)\s+likely\s+to/gi
+        ];
+        
+        comparisonPatterns.forEach(pattern => {
+          const matches = text.matchAll(pattern);
+          for (const match of matches) {
+            // Check if this match overlaps with our current gender position
+            if (match.index !== undefined) {
+              const matchStart = match.index;
+              const matchEnd = match.index + match[0].length;
+              const genderCharPos = genderPos.index;
+              
+              // Only flag if the gender position is within this comparison match
+              if (genderCharPos >= matchStart - 10 && genderCharPos <= matchEnd + 10) {
+                biasFound = true;
+                biasType = 'explicit gender comparison';
+                confidence = 0.90; // Very high confidence for explicit comparisons
+                matchedPattern = match[0].substring(0, 30) + '...';
+                break;
+              }
+            }
+          }
+        });
+      }
+      
+      // Only add pattern if bias was found with sufficient confidence
+      if (biasFound && confidence >= 0.75) {
+        // Calculate the full span of the biased content
+        const spanStart = Math.max(0, genderPos.index - 20);
+        const spanEnd = Math.min(text.length, genderPos.index + genderPos.originalText.length + 30);
+        const spanText = text.substring(spanStart, spanEnd).trim();
+        
+        patterns.push({
+          type: 'gender_bias',
+          confidence,
+          textSpan: {
+            start: spanStart,
+            end: spanEnd,
+            text: spanText
+          },
+          explanation: `Gender bias detected: ${biasType} (${matchedPattern})`
+        });
+      }
+    });
+    
+    // Remove duplicate patterns that overlap significantly
+    return this.deduplicateGenderPatterns(patterns);
+  }
+  
+  /**
+   * Remove overlapping gender bias patterns
+   */
+  private deduplicateGenderPatterns(patterns: BiasPattern[]): BiasPattern[] {
+    const filtered: BiasPattern[] = [];
+    
+    patterns.forEach(pattern => {
+      const hasOverlap = filtered.some(existing => {
+        const overlapStart = Math.max(pattern.textSpan.start, existing.textSpan.start);
+        const overlapEnd = Math.min(pattern.textSpan.end, existing.textSpan.end);
+        const overlapLength = Math.max(0, overlapEnd - overlapStart);
+        const minLength = Math.min(
+          pattern.textSpan.end - pattern.textSpan.start,
+          existing.textSpan.end - existing.textSpan.start
+        );
+        return overlapLength > minLength * 0.5; // More than 50% overlap
+      });
+      
+      if (!hasOverlap) {
+        filtered.push(pattern);
+      } else {
+        // Keep the one with higher confidence
+        const existingIndex = filtered.findIndex(existing => {
+          const overlapStart = Math.max(pattern.textSpan.start, existing.textSpan.start);
+          const overlapEnd = Math.min(pattern.textSpan.end, existing.textSpan.end);
+          const overlapLength = Math.max(0, overlapEnd - overlapStart);
+          const minLength = Math.min(
+            pattern.textSpan.end - pattern.textSpan.start,
+            existing.textSpan.end - existing.textSpan.start
+          );
+          return overlapLength > minLength * 0.5;
+        });
+        
+        if (existingIndex !== -1 && pattern.confidence > filtered[existingIndex].confidence) {
+          filtered[existingIndex] = pattern;
         }
       }
     });
     
-    return patterns;
+    return filtered;
   }
   
   /**

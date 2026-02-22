@@ -35,7 +35,14 @@ export const MESSAGE_TYPES = {
   // Popup messages
   GET_EXTENSION_STATE: 'get_extension_state',
   UPDATE_PREFERENCES: 'update_preferences',
-  TOGGLE_PLATFORM: 'toggle_platform'
+  TOGGLE_PLATFORM: 'toggle_platform',
+  GET_PLATFORM_STATUS: 'get_platform_status',
+  TOGGLE_SIDEBAR: 'toggle_sidebar',
+  
+  // Analysis messages
+  EVALUATE_RESPONSE: 'evaluate_response',
+  CROSS_MODEL_VERIFY: 'cross_model_verify',
+  CROSS_AI_OPTIMIZE: 'cross_ai_optimize'
 } as const;
 
 // Storage keys
@@ -51,7 +58,7 @@ export const UI_CONSTANTS = {
   SIDEBAR_WIDTH: '350px',
   SIDEBAR_MIN_WIDTH: '280px',
   ANIMATION_DURATION: '0.3s',
-  Z_INDEX_BASE: 10000,
+  Z_INDEX_BASE: 999999,
   CHALLENGE_CHAR_MIN: 50,
   CHALLENGE_CHAR_MAX: 500
 } as const;

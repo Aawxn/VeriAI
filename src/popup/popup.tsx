@@ -27,17 +27,62 @@ const Popup: React.FC = () => {
 
   const loadExtensionState = async () => {
     try {
-      const message: ExtensionMessage = {
-        type: MESSAGE_TYPES.GET_EXTENSION_STATE,
-        payload: {},
-        sender: 'popup',
-        timestamp: new Date()
-      };
-
-      const response = await chrome.runtime.sendMessage(message);
-      setExtensionState(response);
+      console.log('Loading platform status...');
+      
+      // Try to wake up background script with retries
+      let connected = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const pingResponse = await chrome.runtime.sendMessage({ type: 'PING' });
+          if (pingResponse?.success) {
+            console.log('✅ Background script is alive');
+            connected = true;
+            break;
+          }
+        } catch (pingError) {
+          console.warn(`⚠️ Background script may be asleep, attempt ${attempt}/3...`);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+          }
+        }
+      }
+      
+      if (!connected) {
+        console.error('❌ Could not connect to background script after 3 attempts');
+        throw new Error('Background script not responding. Please reload the extension.');
+      }
+      
+      const response = await chrome.runtime.sendMessage({
+        type: 'GET_PLATFORM_STATUS'
+      });
+      
+      console.log('Platform status response:', response);
+      
+      if (response && response.success) {
+        setExtensionState({
+          preferences: null,
+          activePlatforms: response.platforms.map((p: any) => p.platform),
+          platformState: response.platforms.reduce((acc: any, p: any) => {
+            acc[p.platform] = p;
+            return acc;
+          }, {})
+        });
+      } else {
+        console.log('ℹ️ No active platforms yet');
+        setExtensionState({
+          preferences: null,
+          activePlatforms: [],
+          platformState: {}
+        });
+      }
     } catch (error) {
       console.error('Failed to load extension state:', error);
+      // Set empty state instead of leaving it loading
+      setExtensionState({
+        preferences: null,
+        activePlatforms: [],
+        platformState: {}
+      });
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +107,8 @@ const Popup: React.FC = () => {
   };
 
   const handleSettingsClick = () => {
-    alert('Settings functionality will be implemented in a future task');
+    // Open settings page in a new tab
+    chrome.tabs.create({ url: chrome.runtime.getURL('settings.html') });
   };
 
   const handleHelpClick = () => {
@@ -72,11 +118,62 @@ const Popup: React.FC = () => {
   const handleToggleSidebar = async () => {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab.id) {
-        await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_SIDEBAR' });
+      if (!tab.id) {
+        console.error('No active tab found');
+        alert('No active tab found');
+        return;
+      }
+
+      // Check if we're on a supported platform
+      const url = tab.url || '';
+      const isSupportedPlatform = 
+        url.includes('chatgpt.com') || 
+        url.includes('chat.openai.com') ||
+        url.includes('copilot.microsoft.com') ||
+        url.includes('gemini.google.com') ||
+        url.includes('bard.google.com') ||
+        url.includes('claude.ai');
+
+      if (!isSupportedPlatform) {
+        alert('Please navigate to a supported AI platform (ChatGPT, Copilot, Gemini, or Claude)');
+        return;
+      }
+
+      try {
+        // Try to send message to content script
+        const response = await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_SIDEBAR' });
+        console.log('Sidebar toggle response:', response);
+      } catch (contentScriptError) {
+        console.warn('Content script error:', contentScriptError);
+        
+        // Try to inject the content script
+        try {
+          console.log('Attempting to inject content script...');
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content.js']  // Fixed: removed 'dist/' prefix
+          });
+          
+          // Also inject CSS
+          await chrome.scripting.insertCSS({
+            target: { tabId: tab.id },
+            files: ['content.css']
+          });
+          
+          // Wait a bit for initialization
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Try again
+          await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_SIDEBAR' });
+          console.log('Successfully toggled after injection');
+        } catch (injectionError) {
+          console.error('Failed to inject content script:', injectionError);
+          alert('Failed to load extension. Please refresh the page (Ctrl+Shift+R) and try again.');
+        }
       }
     } catch (error) {
       console.error('Failed to toggle sidebar:', error);
+      alert('An error occurred. Please refresh the page and try again.');
     }
   };
 

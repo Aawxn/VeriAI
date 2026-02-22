@@ -9,6 +9,7 @@ import { ExtensionMessage, SupportedPlatform } from '../types';
 import { PlatformAdapterFactory } from './adapters/PlatformAdapterFactory';
 import { UIManager } from './ui/UIManager';
 import { biasDetector } from '../shared/biasDetection';
+import { NLPBiasDetector } from '../shared/nlpBiasDetector';
 import { ChainOfThoughtExtractor } from '../shared/chainOfThoughtExtractor';
 
 class ContentScriptManager {
@@ -40,8 +41,8 @@ class ContentScriptManager {
   
   private setupReloadListener(): void {
     window.addEventListener('ai-ethics-reload-requested', () => {
-      console.log('🔄 Reload requested by user');
-      this.checkForNewResponse();
+      console.log('🔄 Reload requested by user - forcing latest response analysis');
+      this.forceAnalyzeLatest();
     });
   }
   
@@ -146,20 +147,24 @@ class ContentScriptManager {
   }
   
   private async registerPlatform(): Promise<void> {
-    const message: ExtensionMessage = {
-      type: MESSAGE_TYPES.REGISTER_PLATFORM,
-      payload: {
-        platform: this.platform,
-        url: window.location.href
-      },
-      sender: 'content',
-      timestamp: new Date()
-    };
+    console.log('Registering platform:', this.platform);
     
-    console.log('Registering platform:', message);
     try {
-      await chrome.runtime.sendMessage(message);
-      console.log('Platform registered successfully');
+      const response = await chrome.runtime.sendMessage({
+        type: 'REGISTER_PLATFORM',
+        payload: {
+          platform: this.platform,
+          url: window.location.href
+        }
+      });
+      
+      console.log('Platform registration response:', response);
+      
+      if (response && response.success) {
+        console.log(`✅ Platform ${this.platform} registered successfully`);
+      } else {
+        console.error('❌ Platform registration failed:', response);
+      }
     } catch (error) {
       console.error('Failed to register platform:', error);
     }
@@ -223,6 +228,19 @@ class ContentScriptManager {
     }
   }
   
+  private forceAnalyzeLatest(): void {
+    if (!this.platformAdapter) return;
+    
+    // Force detection of the latest response (re-process even if already seen)
+    const response = this.platformAdapter.forceDetectLatest?.() || this.platformAdapter.detectNewResponse();
+    if (response) {
+      console.log('🔄 Latest response found via forced reload');
+      this.handleAIResponse(response);
+    } else {
+      console.log('❌ No response found to analyze');
+    }
+  }
+  
   private async handleAIResponse(response: any): Promise<void> {
     try {
       console.log('🔍 Processing AI response:', response.content.substring(0, 100) + '...');
@@ -235,17 +253,23 @@ class ContentScriptManager {
       );
       console.log(`✓ Extracted ${chainOfThought.steps.length} reasoning steps`);
       
-      // Perform bias analysis
-      console.log('🔍 Analyzing for bias...');
+      // Perform keyword-based bias analysis
+      console.log('🔍 Analyzing for bias (keyword-based)...');
       const biasAnalysis = await this.performBiasAnalysis(response.content);
-      console.log(`✓ Bias analysis complete: ${biasAnalysis.overallRisk} risk`);
+      console.log(`✓ Keyword bias analysis complete: ${biasAnalysis.overallRisk} risk`);
+      
+      // Perform NLP-based bias analysis
+      console.log('🧠 Analyzing for bias (NLP-based)...');
+      const nlpBiasAnalysis = await this.performNLPBiasAnalysis(response.content);
+      console.log(`✓ NLP bias analysis complete: ${nlpBiasAnalysis ? nlpBiasAnalysis.overallScore + '/100' : 'N/A'}`);
       
       // Display results in UI
       console.log('📊 Displaying analysis in sidebar...');
       await this.uiManager.displayAnalysis({
         response,
         chainOfThought,
-        biasAnalysis
+        biasAnalysis,
+        nlpBiasAnalysis
       });
       console.log('✅ Analysis displayed successfully');
       
@@ -255,7 +279,8 @@ class ContentScriptManager {
         payload: {
           response,
           chainOfThought,
-          biasAnalysis
+          biasAnalysis,
+          nlpBiasAnalysis
         },
         sender: 'content',
         timestamp: new Date()
@@ -270,15 +295,51 @@ class ContentScriptManager {
   
   private async performBiasAnalysis(content: string): Promise<any> {
     console.log('🔍 Analyzing text for bias...');
+    
+    // Keyword-based bias detection (existing)
     const result = biasDetector.analyzeText(content);
-    console.log('✓ Bias analysis complete:', result);
-    return result;
+    
+    // Also perform sentence-wise analysis
+    const sentenceAnalysis = biasDetector.analyzeSentenceWise(content);
+    
+    console.log('✓ Keyword-based bias analysis complete:', result);
+    console.log('✓ Sentence-wise analysis complete:', sentenceAnalysis.length, 'sentences analyzed');
+    
+    // Combine both analyses
+    return {
+      ...result,
+      sentenceAnalysis
+    };
+  }
+
+  private async performNLPBiasAnalysis(content: string): Promise<any> {
+    console.log('🧠 Performing NLP-based bias analysis...');
+    
+    try {
+      const nlpResult = NLPBiasDetector.analyze(content);
+      console.log('✓ NLP bias analysis complete:', nlpResult);
+      return nlpResult;
+    } catch (error) {
+      console.error('❌ NLP bias analysis failed:', error);
+      return null;
+    }
   }
   
   private async showTestAnalysis(): Promise<void> {
     if (this.platform === 'generic') return;
     
     console.log('Showing test analysis for platform:', this.platform);
+    
+    // TEST: Check if NLP is available
+    console.log('🧪 Testing NLP availability...');
+    try {
+      const testNLP = require('compromise');
+      console.log('✓ NLP module loaded:', typeof testNLP);
+      const testDoc = testNLP('Hello world');
+      console.log('✓ NLP test doc created:', testDoc ? 'YES' : 'NO');
+    } catch (error) {
+      console.error('❌ NLP test failed:', error);
+    }
     
     // Create a test response with biased content and reasoning to demonstrate detection
     const testResponse = {
@@ -315,11 +376,17 @@ In conclusion, the key takeaway is that you should carefully evaluate all factor
     const testBiasAnalysis = await this.performBiasAnalysis(testResponse.content);
     console.log('Bias analysis complete:', testBiasAnalysis);
     
+    // Run NLP bias analysis on the test content
+    console.log('Running NLP bias analysis on test content...');
+    const testNLPBiasAnalysis = await this.performNLPBiasAnalysis(testResponse.content);
+    console.log('NLP bias analysis complete:', testNLPBiasAnalysis);
+    
     console.log('Displaying analysis in UI...');
     await this.uiManager.displayAnalysis({
       response: testResponse,
       chainOfThought: testChainOfThought,
-      biasAnalysis: testBiasAnalysis
+      biasAnalysis: testBiasAnalysis,
+      nlpBiasAnalysis: testNLPBiasAnalysis
     });
   }
 }
@@ -332,20 +399,29 @@ In conclusion, the key takeaway is that you should carefully evaluate all factor
   console.log('URL:', window.location.href);
   console.log('Timestamp:', new Date().toISOString());
   
-  try {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        console.log('✓ DOM Content Loaded - Initializing...');
-        new ContentScriptManager();
-      });
-    } else {
-      console.log('✓ DOM already loaded - Initializing immediately...');
+  // Add a small delay to ensure DOM is ready
+  const initializeExtension = () => {
+    try {
+      console.log('Initializing ContentScriptManager...');
       new ContentScriptManager();
+      console.log('✅ ContentScriptManager initialized successfully');
+    } catch (error) {
+      console.error('✗ Failed to initialize AI Ethics Monitor:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Stack trace:', error.stack);
+      }
     }
-  } catch (error) {
-    console.error('✗ Failed to initialize AI Ethics Monitor:', error);
-    if (error instanceof Error) {
-      console.error('Stack trace:', error.stack);
-    }
+  };
+  
+  if (document.readyState === 'loading') {
+    console.log('⏳ Waiting for DOMContentLoaded...');
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('✓ DOM Content Loaded');
+      initializeExtension();
+    });
+  } else {
+    console.log('✓ DOM already loaded');
+    initializeExtension();
   }
 })();

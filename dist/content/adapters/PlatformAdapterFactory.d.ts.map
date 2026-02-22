@@ -1,1 +1,0 @@
-{"version":3,"file":"PlatformAdapterFactory.d.ts","sourceRoot":"","sources":["../../../src/content/adapters/PlatformAdapterFactory.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,OAAO,EAAE,iBAAiB,EAAE,MAAM,aAAa,CAAC;AAEhD,OAAO,EAAE,mBAAmB,EAAE,MAAM,uBAAuB,CAAC;AAM5D,qBAAa,sBAAsB;IACjC,MAAM,CAAC,MAAM,CAAC,QAAQ,EAAE,iBAAiB,GAAG,mBAAmB;CAmBhE"}
