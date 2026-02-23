@@ -4,7 +4,6 @@
 
 import { UI_CONSTANTS, MESSAGE_TYPES } from '../../shared/constants';
 import { CrossModelVerificationUI } from './CrossModelVerificationUI';
-import { CrossAIOptimizationUI } from './CrossAIOptimizationUI';
 
 export class UIManager {
   private sidebar: HTMLElement | null = null;
@@ -1304,6 +1303,15 @@ export class UIManager {
         left: 0;
         color: #10b981;
         font-weight: bold;
+      }
+
+      /* ============ INLINE CROSS-AI SCORES ============ */
+      .crossai-inline-score {
+        background: var(--theme-bg-card);
+        border: 1px solid var(--theme-border);
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
       }
     `;
     
@@ -3209,7 +3217,7 @@ export class UIManager {
   }
   
   /**
-   * Handle Cross-AI Optimization request
+   * Handle Cross-AI Optimization request — renders results inline in the Cross-AI tab
    */
   private async handleCrossAIOptimization(responseId?: string): Promise<void> {
     console.log('🌟 Cross-AI Optimization requested for response:', responseId);
@@ -3222,6 +3230,7 @@ export class UIManager {
     const { response } = this.currentAnalysis;
     const statusEl = document.getElementById('ai-ethics-optimization-status');
     const optimizeBtn = document.getElementById('ai-ethics-optimize-response') as HTMLButtonElement;
+    const resultsContainer = document.getElementById('ai-ethics-crossai-results');
     
     if (!statusEl || !optimizeBtn) return;
 
@@ -3241,6 +3250,9 @@ export class UIManager {
       statusEl.className = 'ai-ethics-optimization-status loading';
       statusEl.innerHTML = '🤖 Querying Gemini and comparing responses... This may take 5-10 seconds.';
       
+      // Clear previous results
+      if (resultsContainer) resultsContainer.innerHTML = '';
+
       console.log('📤 Sending Cross-AI optimization request...');
       
       // Send optimization request to background service
@@ -3254,7 +3266,7 @@ export class UIManager {
       });
       
       console.log('✅ Optimization response received:', optimizationResponse);
-      
+
       if (!optimizationResponse || !optimizationResponse.success) {
         throw new Error(optimizationResponse?.error || 'Optimization failed');
       }
@@ -3262,33 +3274,221 @@ export class UIManager {
       // Update status to success
       statusEl.className = 'ai-ethics-optimization-status success';
       statusEl.innerHTML = `✅ Optimization complete! Best Model: ${optimizationResponse.optimization.bestModel}`;
-      
-      // Display full optimization report
-      console.log('🌟 Displaying Cross-AI Optimization Report...');
-      const optimizationUI = new CrossAIOptimizationUI();
-      optimizationUI.displayOptimizationReport(optimizationResponse.optimization);
+
+      // Render results inline in the Cross-AI tab
+      if (resultsContainer) {
+        resultsContainer.innerHTML = this.renderCrossAIResultsInline(optimizationResponse.optimization);
+        this.setupInlineCollapsibles(resultsContainer);
+      }
       
       // Re-enable button
       optimizeBtn.disabled = false;
-      optimizeBtn.innerHTML = '<span>🌟</span> Optimize with Multiple AIs';
+      optimizeBtn.innerHTML = '<span class="optimize-icon">🌟</span> Optimize with Multiple AIs';
       
-      console.log('✅ Cross-AI optimization complete');
+      console.log('✅ Cross-AI optimization rendered inline');
       
     } catch (error) {
       console.error('❌ Optimization error:', error);
       
-      // Update status to error
       if (statusEl) {
         statusEl.className = 'ai-ethics-optimization-status error';
         statusEl.innerHTML = `❌ Optimization failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
       }
       
-      // Re-enable button
       if (optimizeBtn) {
         optimizeBtn.disabled = false;
-        optimizeBtn.innerHTML = '<span>🌟</span> Optimize with Multiple AIs';
+        optimizeBtn.innerHTML = '<span class="optimize-icon">🌟</span> Optimize with Multiple AIs';
       }
     }
+  }
+
+  /**
+   * Render Cross-AI optimization results inline inside the sidebar tab
+   */
+  private renderCrossAIResultsInline(data: any): string {
+    const getScoreColor = (s: number, inv = false) =>
+      inv ? (s < 30 ? '#4ade80' : s < 70 ? '#fbbf24' : '#f87171')
+          : (s >= 80 ? '#4ade80' : s >= 60 ? '#fbbf24' : '#f87171');
+
+    const scoreBar = (score: number, inv = false) => {
+      const c = getScoreColor(score, inv);
+      return `<div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px;margin-top:6px;overflow:hidden;">
+        <div style="width:${score}%;height:100%;background:${c};border-radius:3px;"></div>
+      </div>`;
+    };
+
+    const modelIcons: Record<string, string> = {
+      chatgpt: '🟢', claude: '🟣', gemini: '🔵', deepseek: '🔶', copilot: '🟦'
+    };
+    const modelNames: Record<string, string> = {
+      chatgpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini', deepseek: 'DeepSeek', copilot: 'Copilot'
+    };
+    const fmtModel = (m: string) => modelNames[m.toLowerCase()] || m;
+    const fmtIcon = (m: string) => modelIcons[m.toLowerCase()] || '🤖';
+
+    const agreements = data.comparativeAnalysis?.agreements || [];
+    const contradictions = data.comparativeAnalysis?.contradictions || [];
+    const uniqueInsights = data.comparativeAnalysis?.uniqueInsights || [];
+    const commonWeaknesses = data.comparativeAnalysis?.commonWeaknesses || [];
+
+    return `
+      <!-- Scores -->
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin:14px 0;">
+        <div class="crossai-inline-score">
+          <div style="font-size:10px;color:var(--theme-text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Consistency</div>
+          <div style="font-size:22px;font-weight:700;color:${getScoreColor(data.consistencyScore)};">${data.consistencyScore}</div>
+          ${scoreBar(data.consistencyScore)}
+        </div>
+        <div class="crossai-inline-score">
+          <div style="font-size:10px;color:var(--theme-text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Completeness</div>
+          <div style="font-size:22px;font-weight:700;color:${getScoreColor(data.completenessScore)};">${data.completenessScore}</div>
+          ${scoreBar(data.completenessScore)}
+        </div>
+        <div class="crossai-inline-score">
+          <div style="font-size:10px;color:var(--theme-text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Bias Risk</div>
+          <div style="font-size:22px;font-weight:700;color:${getScoreColor(data.biasRiskScore, true)};">${data.biasRiskScore}</div>
+          ${scoreBar(data.biasRiskScore, true)}
+        </div>
+      </div>
+
+      <!-- Best Model -->
+      <div style="padding:8px 12px;background:color-mix(in srgb,var(--theme-primary) 12%,transparent);border:1px solid color-mix(in srgb,var(--theme-primary) 25%,transparent);border-radius:6px;font-size:11px;font-weight:600;color:var(--theme-primary);text-align:center;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:14px;">
+        🏆 Best Model: <strong>${data.bestModel}</strong>
+      </div>
+
+      <!-- Final Answer -->
+      <div class="ai-ethics-section">
+        <div class="ai-ethics-section-title">✨ Optimized Answer</div>
+        <div style="background:var(--theme-bg-card);border:1px solid var(--theme-border);border-left:3px solid var(--theme-primary);border-radius:8px;padding:12px;color:#e0e0e0;font-size:12px;line-height:1.7;">
+          ${this.formatMarkdown(data.finalAnswer || '')}
+        </div>
+      </div>
+
+      <!-- Comparative Analysis -->
+      <div class="ai-ethics-section">
+        <div class="ai-ethics-section-title">🔍 Comparative Analysis</div>
+        ${this.renderInlineAnalysisCard('✅ Agreements', agreements)}
+        ${this.renderInlineAnalysisCard('⚠️ Contradictions', contradictions)}
+        ${this.renderInlineAnalysisCard('💎 Unique Insights', uniqueInsights)}
+        ${this.renderInlineAnalysisCard('🔧 Weaknesses', commonWeaknesses)}
+      </div>
+
+      <!-- Model Responses -->
+      <div class="ai-ethics-section">
+        <div class="ai-ethics-section-title">🤖 Model Responses</div>
+        ${Object.entries(data.modelResponses || {}).map(([model, resp]: [string, any]) => `
+          <div style="background:var(--theme-bg-card);border:1px solid var(--theme-border);border-left:3px solid var(--theme-primary);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+            <div style="font-size:10px;font-weight:600;color:var(--theme-primary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:flex;justify-content:space-between;">
+              <span>${fmtIcon(model)} ${fmtModel(model)}</span>
+              <span style="color:var(--theme-text-muted);font-weight:400;">${resp.responseTime || 0}ms</span>
+            </div>
+            <div style="font-size:11px;color:#d1d5db;line-height:1.5;">
+              ${resp.error ? `<span style="color:#f87171;">❌ ${resp.error}</span>` : (resp.answer || '').substring(0, 250) + ((resp.answer || '').length > 250 ? '...' : '')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Model Notes -->
+      <div class="ai-ethics-section">
+        <div class="ai-ethics-section-title">📝 Performance Notes</div>
+        ${Object.entries(data.modelNotes || {}).map(([model, note]: [string, any]) => `
+          <div style="background:var(--theme-bg-card);border:1px solid var(--theme-border);border-left:3px solid var(--theme-primary);border-radius:6px;padding:8px 12px;margin-bottom:6px;">
+            <span style="font-weight:600;color:var(--theme-primary);font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">${fmtModel(model)}:</span>
+            <span style="color:#d1d5db;font-size:11px;margin-left:6px;">${note}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Recommendations -->
+      <div class="ai-ethics-section">
+        <div class="ai-ethics-section-title">💡 Recommendations</div>
+        ${(data.recommendations || []).map((rec: string) => `
+          <div style="background:var(--theme-bg-card);border:1px solid var(--theme-border);border-left:3px solid var(--theme-primary);border-radius:6px;padding:8px 12px;margin-bottom:6px;color:#d1d5db;font-size:11px;line-height:1.5;">${rec}</div>
+        `).join('')}
+      </div>
+
+      <!-- How Consensus Works (collapsible) -->
+      <div class="ai-ethics-section">
+        <div class="ai-ethics-section-title crossai-collapsible-toggle" style="cursor:pointer;user-select:none;">
+          🧠 How Consensus Works <span class="crossai-collapse-arrow" style="margin-left:auto;font-size:10px;transition:transform 0.25s;">▶</span>
+        </div>
+        <div class="crossai-collapsible-body" style="display:none;font-size:11px;color:#d1d5db;line-height:1.6;">
+          <p style="margin:8px 0;"><strong style="color:var(--theme-primary);">1. Parallel Querying</strong> — We simultaneously query Claude, Gemini, and DeepSeek with your question.</p>
+          <p style="margin:8px 0;"><strong style="color:var(--theme-primary);">2. Meta-Evaluation</strong> — A meta-evaluator AI analyzes ALL responses for facts, reasoning, and completeness.</p>
+          <p style="margin:8px 0;"><strong style="color:var(--theme-primary);">3. Scoring</strong> — Consistency, Completeness, and Bias Risk are each rated 0-100.</p>
+          <p style="margin:8px 0;"><strong style="color:var(--theme-primary);">4. Best Model</strong> — Factual accuracy (40%), Reasoning (30%), Completeness (20%), Low bias (10%).</p>
+          <p style="margin:8px 0;"><strong style="color:var(--theme-primary);">5. Synthesis</strong> — Accurate facts are combined; errors and biases are removed.</p>
+        </div>
+      </div>
+
+      <!-- Meta -->
+      <div style="padding:10px 0;border-top:1px solid rgba(255,255,255,0.06);font-size:10px;color:var(--theme-text-muted);margin-top:8px;">
+        🕐 ${new Date(data.timestamp).toLocaleTimeString()} &nbsp;·&nbsp; 🔬 Verified by ${Object.keys(data.modelResponses || {}).length} AI models
+      </div>
+    `;
+  }
+
+  /**
+   * Small helper: render one analysis card inline
+   */
+  private renderInlineAnalysisCard(title: string, items: string[]): string {
+    return `
+      <div style="background:var(--theme-bg-card);border:1px solid var(--theme-border);border-left:3px solid var(--theme-primary);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+        <div style="font-size:10px;font-weight:600;color:var(--theme-primary);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;">${title}</div>
+        ${items.length > 0
+          ? items.map(i => `<div style="font-size:11px;color:#d1d5db;line-height:1.5;margin-bottom:4px;padding-left:12px;position:relative;">
+              <span style="position:absolute;left:0;color:var(--theme-primary);">•</span>${i}
+            </div>`).join('')
+          : `<div style="font-size:11px;color:var(--theme-text-muted);font-style:italic;">None detected</div>`
+        }
+      </div>
+    `;
+  }
+
+  /**
+   * Format markdown text to HTML (used for final answer)
+   */
+  private formatMarkdown(text: string): string {
+    let html = text;
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    html = html.replace(/(?<!\*)\*([^\*]+?)\*(?!\*)/g, '<em>$1</em>');
+    html = html.replace(/^### (.+)$/gm, '<h4 style="font-size:13px;font-weight:600;color:var(--theme-primary);margin:12px 0 6px;">$1</h4>');
+    html = html.replace(/^## (.+)$/gm, '<h3 style="font-size:14px;font-weight:700;color:var(--theme-primary);margin:14px 0 8px;">$1</h3>');
+    html = html.replace(/^# (.+)$/gm, '<h2 style="font-size:15px;font-weight:700;color:var(--theme-primary);margin:16px 0 10px;">$1</h2>');
+    html = html.replace(/^[\*\-] (.+)$/gm, '<li style="margin-left:16px;margin-bottom:4px;">$1</li>');
+    html = html.replace(/^\d+\. (.+)$/gm, '<li style="margin-left:16px;margin-bottom:4px;list-style-type:decimal;">$1</li>');
+    html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, (match) => {
+      if (match.includes('list-style-type:decimal')) return `<ol style="margin:8px 0;padding-left:16px;">${match}</ol>`;
+      return `<ul style="margin:8px 0;padding-left:16px;">${match}</ul>`;
+    });
+    html = html.replace(/```(.+?)```/gs, '<pre style="background:var(--theme-bg-dark);padding:8px;border-radius:4px;overflow-x:auto;margin:8px 0;font-size:11px;"><code>$1</code></pre>');
+    html = html.replace(/`([^`]+)`/g, '<code style="background:var(--theme-bg-dark);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11px;">$1</code>');
+    html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--theme-primary);text-decoration:underline;">$1</a>');
+    html = html.split('\n\n').map(p => {
+      p = p.trim();
+      if (!p || p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<ol') || p.startsWith('<pre') || p.startsWith('<blockquote') || p.startsWith('<hr')) return p;
+      return `<p style="margin:8px 0;line-height:1.6;">${p.replace(/\n/g, '<br>')}</p>`;
+    }).join('');
+    return html;
+  }
+
+  /**
+   * Wire up the collapsible "How Consensus Works" toggle inside inline results
+   */
+  private setupInlineCollapsibles(container: HTMLElement): void {
+    const toggles = container.querySelectorAll('.crossai-collapsible-toggle');
+    toggles.forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const body = toggle.nextElementSibling as HTMLElement;
+        const arrow = toggle.querySelector('.crossai-collapse-arrow') as HTMLElement;
+        if (!body) return;
+        const isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : 'block';
+        if (arrow) arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+      });
+    });
   }
 
   /**

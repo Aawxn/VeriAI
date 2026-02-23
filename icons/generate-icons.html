@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>VeriAI Icon Generator</title>
+  <style>
+    body { font-family: system-ui; background: #1a1a2e; color: #eee; padding: 40px; }
+    h1 { color: #00D4FF; }
+    .row { display: flex; gap: 30px; align-items: end; margin: 20px 0; flex-wrap: wrap; }
+    .icon-box { text-align: center; }
+    .icon-box canvas { border: 1px solid #333; border-radius: 8px; }
+    .icon-box p { margin-top: 8px; font-size: 12px; color: #888; }
+    button { background: #00D4FF; color: #0D1B2A; border: none; padding: 12px 24px; border-radius: 8px;
+             font-weight: 700; cursor: pointer; font-size: 14px; margin-top: 20px; }
+    button:hover { background: #00b8d9; }
+    .instructions { background: #0d1b2a; border: 1px solid #00D4FF33; padding: 20px; border-radius: 10px;
+                    margin: 20px 0; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <h1>VeriAI Icon Generator</h1>
+  <div class="instructions">
+    <strong>Instructions:</strong><br>
+    1. Click "Generate & Download All" to download PNG icons at 16, 32, 48, and 128px<br>
+    2. Place the downloaded files in the <code>icons/</code> folder, replacing the existing ones<br>
+    3. The SVG source is at <code>icons/logo.svg</code>
+  </div>
+  <div class="row" id="previews"></div>
+  <button onclick="downloadAll()">Generate & Download All</button>
+
+  <script>
+    const sizes = [16, 32, 48, 128];
+    const svgURL = 'logo.svg';
+
+    async function loadSVG() {
+      const resp = await fetch(svgURL);
+      const text = await resp.text();
+      return text;
+    }
+
+    async function renderIcon(size) {
+      const svgText = await loadSVG();
+      const blob = new Blob([svgText], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      return new Promise((resolve) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, size, size);
+          URL.revokeObjectURL(url);
+          resolve(canvas);
+        };
+        img.src = url;
+      });
+    }
+
+    async function init() {
+      const container = document.getElementById('previews');
+      for (const size of sizes) {
+        const canvas = await renderIcon(size);
+        const box = document.createElement('div');
+        box.className = 'icon-box';
+        // Show at display size (scaled up for small ones)
+        const displayCanvas = document.createElement('canvas');
+        const displaySize = Math.max(size, 64);
+        displayCanvas.width = displaySize;
+        displayCanvas.height = displaySize;
+        displayCanvas.style.width = displaySize + 'px';
+        displayCanvas.style.height = displaySize + 'px';
+        const ctx = displayCanvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(canvas, 0, 0, displaySize, displaySize);
+        box.appendChild(displayCanvas);
+        box.innerHTML += `<p>icon${size}.png (${size}x${size})</p>`;
+        container.appendChild(box);
+      }
+    }
+
+    async function downloadAll() {
+      for (const size of sizes) {
+        const canvas = await renderIcon(size);
+        const link = document.createElement('a');
+        link.download = `icon${size}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

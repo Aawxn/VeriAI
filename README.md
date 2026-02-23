@@ -1,191 +1,316 @@
-# AI Ethics Monitor Chrome Extension
+<div align="center">
 
-Universal Conversational AI Ethical Alignment & Chain-of-Thought Monitor
+  <img src="icons/logo.svg" alt="VeriAI Logo" width="120" />
 
-## Overview
+  # VeriAI
 
-The AI Ethics Monitor is a Chrome extension that provides transparency into AI reasoning processes across major web-based conversational AI platforms. It enables users to view AI chain-of-thought reasoning, challenge ethical decisions, detect bias, and contribute to community-driven ethical oversight of AI systems.
+  **AI Transparency & Ethical Alignment Engine**
 
-## Features
+  *See what your AI is really thinking — before you trust its answer.*
 
-- **Chain-of-Thought Display**: View AI reasoning processes in real-time
-- **Cross-AI Verification**: Compare responses from Claude, Gemini, and DeepSeek APIs
-- **Multi-Model Consensus Engine**: Get optimized answers combining insights from multiple AIs using sophisticated meta-evaluation
-- **Bias Detection**: Automated NLP-based detection of gender, racial, political bias, emotional manipulation, and logical fallacies
-- **Trust Scoring**: Comprehensive trust scores with hallucination and manipulation risk metrics
-- **Consistency Analysis**: See how different AI models agree or contradict on facts and reasoning
-- **Ethical Challenges**: Interactive tools to question and improve AI responses
-- **Community Feedback**: Collaborative system for ethical oversight
-- **Educational Resources**: Learn about AI ethics and reasoning processes with in-app explanations
-- **Privacy-First**: Local processing with optional community features
-- **Theme Switching**: Cyan and Purple theme options for personalized UI
+  [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)](https://github.com/Aawxn/VeriAI)
+  [![Manifest V3](https://img.shields.io/badge/Manifest-V3-00D4FF)](https://developer.chrome.com/docs/extensions/mv3/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## How Cross-AI Consensus Works
+  ---
 
-VeriAI uses a **5-step Multi-Model Consensus System** to verify AI responses:
+  [**Install**](#-quick-start) · [**Features**](#-features) · [**How It Works**](#-how-it-works) · [**Architecture**](#%EF%B8%8F-architecture) · [**Roadmap**](#-roadmap) · [**Contributing**](#-contributing)
 
-### 1️⃣ **Parallel Model Querying** (3-5 seconds)
-When you click "Optimize with Multiple AIs":
-- Simultaneously queries **Claude Sonnet 4**, **Gemini 2.0 Flash**, and **DeepSeek Chat**
-- Each model responds independently with their answer
-- No single AI bias influences the result
+</div>
 
-### 2️⃣ **Meta-Evaluation** (2-5 seconds)
-A meta-evaluator AI (Claude or Gemini) analyzes ALL responses:
-- Compares factual accuracy across models
-- Evaluates reasoning quality and completeness
-- Identifies contradictions and unique insights
-- Detects bias indicators
+---
 
-### 3️⃣ **Scoring Algorithm**
-Three key metrics are calculated:
+## The Problem
 
-| Metric | Description | Score Range |
-|--------|-------------|-------------|
-| **Consistency** | How much models agree | 90+ = Strong consensus<br>50-89 = Some agreement<br>0-49 = Contradictions |
-| **Completeness** | How comprehensive the answer is | 90+ = All aspects covered<br>50-89 = Main points covered<br>0-49 = Incomplete |
-| **Bias Risk** | Potential bias detected | 0-20 = Safe<br>21-50 = Medium risk<br>51+ = High risk |
+You ask an AI a question. It gives you a confident, well-written answer. But:
 
-### 4️⃣ **Best Model Selection**
-Models are scored on weighted criteria:
-- **40%** - Factual accuracy
-- **30%** - Reasoning quality
-- **20%** - Completeness
-- **10%** - Low bias
+- **How do you know it's not hallucinating?**
+- **Is the reasoning sound, or just convincing?**
+- **Is there hidden bias shaping the response?**
+- **Would a different AI give a completely different answer?**
 
-The highest-scoring model is marked as "Best Model" 🏆
+LLMs are black boxes. VeriAI cracks them open.
 
-### 5️⃣ **Final Synthesis**
-The meta-evaluator produces the "Final Optimized Answer" by:
-- ✅ Combining accurate facts from all models
-- ✅ Filling gaps where models missed points
-- ✅ Correcting factual errors
-- ✅ Removing bias and contradictions
+---
 
-**Why This Works:**
-- **Diverse Perspectives**: Each AI has different strengths and training data
-- **Error Cancellation**: One model's mistake is caught by others
-- **Bias Reduction**: Averaging reduces systematic bias
-- **Confidence Calibration**: High agreement = High confidence
+## What VeriAI Does
 
-📚 **[Read Full Consensus Engine Documentation](./docs/CONSENSUS_ENGINE.md)**
+VeriAI is a Chrome extension that sits alongside ChatGPT, Claude, Gemini, and Copilot. Every time the AI responds, VeriAI automatically:
 
-## Supported Platforms
+1. **Extracts the Chain of Thought** — maps out the AI's reasoning steps, confidence levels, and logical flow
+2. **Detects Bias** — runs keyword + NLP-based semantic analysis for gender, racial, political bias, loaded language, and generalizations
+3. **Cross-Verifies with Multiple AIs** — queries Claude, Gemini, and DeepSeek simultaneously and synthesizes the best answer
+4. **Scores Everything** — consistency, completeness, bias risk, and per-step confidence
 
-- ChatGPT (chat.openai.com)
-- Claude (claude.ai)
-- Microsoft Copilot (copilot.microsoft.com)
-- Google Gemini (gemini.google.com)
+All in a sleek sidebar with tabbed navigation — no popups, no new tabs.
 
-## Development Setup
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---|---|
+| **🧠 Interactive Chain of Thought** | Expandable flowchart of reasoning steps with color-coded types (premise, evidence, reasoning, conclusion, caveat) and per-step confidence bars |
+| **🔍 Dual Bias Detection** | Keyword-based pattern matching + Compromise.js NLP semantic analysis running in parallel |
+| **⚖️ Cross-AI Verification** | One-click comparison across Claude, Gemini, and DeepSeek-R1 with meta-evaluated consensus scoring |
+| **✨ Optimized Answers** | Synthesis engine combines the best parts of each AI's response |
+| **📊 Trust Scoring** | Consistency (0-100), Completeness (0-100), Bias Risk (0-100) |
+| **🎨 Dual Themes** | Cyan and Purple themes |
+| **🔐 Encrypted API Keys** | AES-256-GCM encryption, stored in Chrome sync storage — never hardcoded |
+| **🌐 Multi-Platform** | ChatGPT, Claude, Gemini, Copilot — same sidebar everywhere |
+
+---
+
+## 📸 Screenshots
+
+<div align="center">
+
+> *Screenshot of the Analysis tab, CoT tab, and Cross-AI tab go here.*
+>
+> To add screenshots, place them in a `docs/screenshots/` folder and reference them like:
+> `![Analysis Tab](docs/screenshots/analysis.png)`
+
+</div>
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js (v16 or higher)
-- npm or yarn
-- Chrome browser for testing
+- **Chrome** (or any Chromium browser)
+- **Node.js** v16+
+- API keys (at least one) from:
+  - [Anthropic Console](https://console.anthropic.com/) (Claude)
+  - [Google AI Studio](https://aistudio.google.com/app/apikey) (Gemini)
+  - [OpenRouter](https://openrouter.ai/keys) (DeepSeek-R1)
 
-### Installation
+### Install
 
-1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd ai-ethics-monitor
-```
+# Clone the repo
+git clone https://github.com/Aawxn/VeriAI.git
+cd VeriAI
 
-2. Install dependencies:
-```bash
+# Install dependencies
 npm install
-```
 
-3. Build the extension:
-```bash
+# Build the extension
 npm run build
 ```
 
-4. Load the extension in Chrome:
-   - Open Chrome and navigate to `chrome://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked" and select the `dist/` directory
+### Load in Chrome
 
-5. Configure API Keys (Required for Cross-AI Verification):
-   - **Option 1 - Via Extension Sidebar (Recommended)**:
-     - Go to ChatGPT, Claude, Gemini, or Copilot website
-     - Click the VeriAI toggle button to open the sidebar
-     - Scroll down to "🔑 TEST YOUR API" section
-     - Enter your API keys:
-       - 🤖 **Claude API Key**: Get from [Anthropic Console](https://console.anthropic.com/)
-       - ✨ **Gemini API Key**: Get from [Google AI Studio](https://aistudio.google.com/app/apikey)
-       - 🧠 **DeepSeek API Key** (Optional): Get from [DeepSeek Platform](https://platform.deepseek.com/)
-     - Click "💾 Save All API Keys"
-   
-   - **Option 2 - Via Extension Popup**:
-     - Click the VeriAI extension icon in Chrome toolbar
-     - Click "Settings"
-     - Same fields available
-     - Keys are stored securely in Chrome sync storage
-   
-   - See [Quick Start Guide](./docs/QUICK_START.md) for detailed instructions
+1. Go to `chrome://extensions/`
+2. Enable **Developer mode** (toggle in top-right)
+3. Click **Load unpacked**
+4. Select the `dist/` folder
 
-### Development Commands
+### Add API Keys
 
-- `npm run dev` - Build in development mode with watch
-- `npm run build` - Build for production
-- `npm run clean` - Clean build directory
-- `npm run type-check` - Run TypeScript type checking
+1. Open any supported AI platform (ChatGPT, Claude, etc.)
+2. VeriAI sidebar appears automatically
+3. Go to the **⚙️ Settings** tab
+4. Enter your API keys → Click **Save**
+5. Keys are encrypted with AES-256-GCM before storage
 
-## Documentation
+---
 
-- 📖 [Quick Start Guide](./docs/QUICK_START.md) - Get started in 5 minutes
-- 🔧 [Claude API Setup](./docs/CLAUDE_API_SETUP.md) - Detailed API configuration
-- 📋 [Integration Summary](./docs/CLAUDE_INTEGRATION_SUMMARY.md) - Technical details
+## 🔬 How It Works
 
-## Project Structure
+### Chain of Thought Extraction
+
+VeriAI doesn't have access to the AI's internal weights — no one does (for closed models). Instead, it performs **post-hoc reasoning analysis**:
 
 ```
-src/
-├── background/          # Background service worker
-├── content/            # Content scripts and platform adapters
-│   ├── adapters/       # Platform-specific adapters
-│   └── ui/            # UI components
-├── popup/             # Extension popup interface
-├── shared/            # Shared utilities and constants
-└── types/             # TypeScript type definitions
-
-dist/                  # Built extension files
-icons/                 # Extension icons
-manifest.json          # Chrome extension manifest
+AI Response → Sentence Tokenization → Pattern Classification → Reasoning Graph
 ```
 
-## Architecture
+Each sentence is classified as one of:
+- `premise` — starting assumptions
+- `reasoning` — logical steps
+- `evidence` — factual claims
+- `conclusion` — final answers
+- `caveat` — hedges and limitations
+- `assumption` — unstated premises
+- `ethical_consideration` — ethical notes
 
-The extension uses a modular architecture with:
+The result is an interactive, expandable flowchart with per-step confidence scoring.
 
-- **Background Service Worker**: Handles extension lifecycle and cross-component communication
-- **Content Scripts**: Platform-specific monitoring and UI injection
-- **Platform Adapters**: Modular system for supporting different AI platforms
-- **UI Manager**: Handles sidebar display and user interactions
-- **Popup Interface**: Extension settings and status display
+### Bias Detection Pipeline
 
-## Privacy & Security
+Two engines run in parallel:
 
-- **Local-First Processing**: All analysis performed locally by default
-- **Opt-in Community Features**: Users control data sharing preferences
-- **No Personal Data Collection**: Extension focuses on AI response analysis only
-- **Secure Communication**: Encrypted data transmission for community features
+| Engine | Method | Catches |
+|--------|--------|---------|
+| **Keyword Detector** | Pattern matching + sentence-level scoring | Explicit bias terms, stereotypes, loaded language |
+| **NLP Detector** | Compromise.js semantic analysis | Implicit bias, generalizations, political framing, gendered language patterns |
 
-## Contributing
+Results are merged into a unified risk score with per-sentence attribution.
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+### Cross-AI Consensus Engine
 
-## License
+```
+User's Question ──┬──→ Claude Sonnet 4    ─┐
+                  ├──→ Gemini 2.0 Flash   ─┼──→ Meta-Evaluator ──→ Optimized Answer
+                  └──→ DeepSeek-R1        ─┘
+```
 
-[License information to be added]
+1. **Parallel Query** — all 3 models receive the same question simultaneously
+2. **Meta-Evaluation** — Claude or Gemini analyzes all responses for accuracy, reasoning, completeness
+3. **Scoring** — Consistency, Completeness, Bias Risk (0-100 each)
+4. **Best Model Selection** — weighted: accuracy (40%), reasoning (30%), completeness (20%), low bias (10%)
+5. **Synthesis** — combines accurate facts, fills gaps, removes bias → Final Optimized Answer
 
-## Support
+---
 
-For issues, questions, or feature requests, please [create an issue](link-to-issues) in the repository.
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│                Chrome Extension              │
+├──────────┬──────────┬────────────┬──────────┤
+│ Content  │ Platform │ Background │  Popup   │
+│ Scripts  │ Adapters │  Worker    │   UI     │
+├──────────┼──────────┼────────────┼──────────┤
+│UIManager │ ChatGPT  │ Message    │ Settings │
+│TabSystem │ Claude   │ Router     │ Status   │
+│COT View  │ Gemini   │ API Proxy  │          │
+│Bias View │ Copilot  │ Key Store  │          │
+├──────────┴──────────┴────────────┴──────────┤
+│              Shared Modules                  │
+├──────────┬──────────┬────────────┬──────────┤
+│  Bias    │   CoT    │  Cross-AI  │  NLP     │
+│Detection │Extractor │ Verifier   │ Detector │
+└──────────┴──────────┴────────────┴──────────┘
+```
+
+### Project Structure
+
+```
+VeriAI/
+├── src/
+│   ├── background/          # Service worker — message routing, API proxying
+│   ├── content/
+│   │   ├── content.ts       # Main content script — orchestrates everything
+│   │   ├── adapters/        # Platform-specific DOM detection
+│   │   │   ├── ChatGPTAdapter.ts
+│   │   │   ├── ClaudeAdapter.ts
+│   │   │   ├── GeminiAdapter.ts
+│   │   │   └── CopilotAdapter.ts
+│   │   └── ui/
+│   │       └── UIManager.ts # Tabbed sidebar UI (Analysis, CoT, Cross-AI, Settings)
+│   ├── shared/
+│   │   ├── biasDetection.ts         # Keyword-based bias detection
+│   │   ├── nlpBiasDetector.ts       # Compromise.js NLP detection
+│   │   ├── chainOfThoughtExtractor.ts # CoT pattern extraction
+│   │   ├── crossAIVerifier.ts       # Multi-model verification engine
+│   │   ├── geminiVerifier.ts        # Gemini ethical supervision
+│   │   └── encryption.ts           # AES-256-GCM key encryption
+│   ├── popup/               # Extension popup HTML + React
+│   └── types/               # TypeScript type definitions
+├── icons/                   # Extension icons + SVG logo
+├── manifest.json            # Chrome Extension Manifest V3
+├── webpack.config.js        # Build config with code splitting
+└── tsconfig.json
+```
+
+### Key Technical Decisions
+
+| Decision | Why |
+|---|---|
+| **Manifest V3** | Required for Chrome Web Store; uses service workers instead of background pages |
+| **Webpack code splitting** | Compromise.js is ~343KB; splitting into `vendors.js` keeps content script lean |
+| **Platform adapter pattern** | Each AI site has different DOM structure; adapters abstract the detection logic |
+| **Chrome storage + AES-256** | API keys never touch disk unencrypted; synced across devices via Chrome sync |
+| **Post-hoc CoT extraction** | Closed models don't expose internals; text pattern analysis is the only viable approach for browser extensions |
+
+---
+
+## 🗺️ Roadmap
+
+### v1.1 — Deeper CoT
+- [ ] **Prompt injection for structured reasoning** — silently request step-by-step output in a parseable format
+- [ ] **Claim decomposition** — split responses into individual verifiable claims
+- [ ] **Source verification** — cross-reference claims against web search results
+
+### v1.2 — Confidence Heatmaps
+- [ ] **Logprob analysis** — use OpenAI's logprobs to identify low-confidence tokens
+- [ ] **Highlight uncertain sentences** — visual heatmap overlay on the AI response
+
+### v1.3 — Community Intelligence
+- [ ] **Shared bias reports** — opt-in anonymous reporting of detected biases
+- [ ] **Model reliability scores** — community-aggregated trust scores per model per topic
+- [ ] **Alert system** — notifications when a model is frequently wrong about a topic
+
+### v2.0 — Open Model Integration
+- [ ] **Local model support** — run small models (Phi, Llama) locally for private verification
+- [ ] **Attention weight analysis** — extract what the model "looked at" via open model APIs
+- [ ] **Self-consistency checks** — ask the same question 3x and flag divergence
+
+---
+
+## 🛠️ Development
+
+```bash
+# Development build with watch mode
+npm run dev
+
+# Production build
+npm run build
+
+# Type checking only
+npm run type-check
+
+# Clean build output
+npm run clean
+```
+
+### Generating Icons
+
+1. Open `icons/generate-icons.html` in a browser
+2. Click "Generate & Download All"
+3. Replace the PNGs in `icons/` with the downloads
+
+---
+
+## 🤝 Contributing
+
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/my-feature`
+3. **Commit** your changes: `git commit -m 'Add my feature'`
+4. **Push** to the branch: `git push origin feature/my-feature`
+5. **Open** a Pull Request
+
+### Areas That Need Help
+
+- **Platform adapters** — Copilot and Gemini adapters need testing
+- **NLP detection** — improve bias detection accuracy, reduce false positives
+- **CoT extraction** — better pattern matching for different AI response styles
+- **UI/UX** — mobile-friendly sidebar, accessibility improvements
+- **Tests** — unit and integration test coverage
+
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [Compromise.js](https://github.com/spencermountain/compromise) — lightweight NLP in the browser
+- [OpenRouter](https://openrouter.ai/) — unified API gateway for DeepSeek-R1
+- Built with TypeScript, Webpack, React, and Chrome Extension APIs
+
+---
+
+<div align="center">
+
+  **VeriAI** — *Trust, but verify.*
+
+  <sub>Made by <a href="https://github.com/Aawxn">@Aawxn</a></sub>
+
+</div>
