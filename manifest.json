@@ -20,8 +20,12 @@
     "https://claude.ai/*",
     "https://generativelanguage.googleapis.com/*",
     "https://api.anthropic.com/*",
+<<<<<<< HEAD
     "https://api.deepseek.com/*",
     "https://openrouter.ai/*"
+=======
+    "https://api.deepseek.com/*"
+>>>>>>> e010db63ff4584e1197c4b3028619d6a783cf168
   ],
   
   "content_security_policy": {
@@ -42,7 +46,11 @@
         "https://bard.google.com/*",
         "https://claude.ai/*"
       ],
+<<<<<<< HEAD
       "js": ["vendors.js", "content.js"],
+=======
+      "js": ["content.js"],
+>>>>>>> e010db63ff4584e1197c4b3028619d6a783cf168
       "css": ["content.css"],
       "run_at": "document_end"
     }
