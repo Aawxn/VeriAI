@@ -34,6 +34,8 @@ export class UIManager {
     chainOfThought: any;
     biasAnalysis: any;
     nlpBiasAnalysis?: any;
+    claimDecomposition?: any;
+    structuredOutput?: any;
   }): Promise<void> {
     console.log('📊 displayAnalysis called with data:', data);
     
@@ -56,6 +58,22 @@ export class UIManager {
     this.showSidebar();
     
     console.log('✅ displayAnalysis complete');
+  }
+
+  /**
+   * Display AI Presence detection report (called from content script for non-known platforms)
+   */
+  public displayAIPresenceReport(report: any): void {
+    if (!this.sidebar) return;
+    const panel = this.sidebar.querySelector('#ai-ethics-aidetect-content');
+    if (!panel) return;
+    
+    // Import display method dynamically
+    import('../../shared/aiPresenceDetector').then(({ AIPresenceDetector }) => {
+      panel.innerHTML = AIPresenceDetector.toDisplayHTML(report);
+    }).catch(() => {
+      panel.innerHTML = `<p style="color: #888; font-size: 11px;">AI detection report available. ${report.detections?.length || 0} detection(s).</p>`;
+    });
   }
   
   /**
@@ -1336,6 +1354,7 @@ export class UIManager {
         <button class="ai-ethics-tab active" data-tab="analysis">📊 Analysis</button>
         <button class="ai-ethics-tab" data-tab="cot">⛓️ CoT</button>
         <button class="ai-ethics-tab" data-tab="crossai">⚖️ Cross-AI</button>
+        <button class="ai-ethics-tab" data-tab="aidetect">🔍 Detect</button>
         <button class="ai-ethics-tab" data-tab="settings">⚙️</button>
       </div>
       <div class="ai-ethics-content" id="ai-ethics-content">
@@ -1357,6 +1376,15 @@ export class UIManager {
             <p>Click "Optimize" after receiving an AI response to compare across models.</p>
           </div>
         </div>
+        <div class="ai-ethics-tab-panel" data-panel="aidetect">
+          <div class="ai-ethics-section">
+            <div class="ai-ethics-section-title">🔍 AI Presence Detection</div>
+            <div id="ai-ethics-aidetect-content">
+              <p style="font-size: 11px; color: var(--theme-text-muted);">Scanning page for hidden AI systems...</p>
+            </div>
+            <button id="ai-ethics-rescan-btn" style="margin-top: 10px; width: 100%; padding: 8px; background: linear-gradient(135deg, #ff9800, #f44336); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">🔄 Re-scan Page</button>
+          </div>
+        </div>
         <div class="ai-ethics-tab-panel" data-panel="settings">
           <div class="ai-ethics-section">
             <div class="ai-ethics-section-title">⚙️ Settings</div>
@@ -1375,6 +1403,8 @@ export class UIManager {
     chainOfThought: any;
     biasAnalysis: any;
     nlpBiasAnalysis?: any;
+    claimDecomposition?: any;
+    structuredOutput?: any;
   }): void {
     console.log('🔄 updateSidebarContent called');
     
@@ -1395,6 +1425,8 @@ export class UIManager {
     const nlpBiasHTML = this.renderNLPBiasAnalysis(data.nlpBiasAnalysis);
     const challengeButtonsHTML = this.renderChallengeButtons(data.response);
     const cotInteractiveHTML = this.renderInteractiveCOT(data.chainOfThought);
+    const claimHTML = this.renderClaimDecomposition(data.claimDecomposition);
+    const structuredHTML = this.renderStructuredOutput(data.structuredOutput);
     
     // Determine which tab is currently active
     const activeTab = this.sidebar.querySelector('.ai-ethics-tab.active')?.getAttribute('data-tab') || 'analysis';
@@ -1402,6 +1434,13 @@ export class UIManager {
     content.innerHTML = `
       <!-- ANALYSIS TAB -->
       <div class="ai-ethics-tab-panel ${activeTab === 'analysis' ? 'active' : ''}" data-panel="analysis">
+        ${structuredHTML ? `<div class="ai-ethics-section">${structuredHTML}</div>` : ''}
+        
+        <div class="ai-ethics-section">
+          <div class="ai-ethics-section-title">🔬 Claim Decomposition</div>
+          ${claimHTML}
+        </div>
+
         <div class="ai-ethics-section">
           <div class="ai-ethics-section-title">🔍 Bias Analysis (Keyword-Based)</div>
           ${biasAnalysisHTML}
@@ -1421,6 +1460,11 @@ export class UIManager {
           <div class="ai-ethics-section-title">🚩 Community Reports</div>
           ${this.renderCommunityReportSection()}
         </div>
+
+        <div class="ai-ethics-section">
+          <div class="ai-ethics-section-title">🔧 Prompt Injection</div>
+          ${this.renderPromptInjectionControls()}
+        </div>
       </div>
       
       <!-- CHAIN OF THOUGHT TAB -->
@@ -1437,6 +1481,20 @@ export class UIManager {
           </p>
           ${this.renderCrossAIOptimizationButton(data.response)}
           <div id="ai-ethics-crossai-results"></div>
+        </div>
+      </div>
+
+      <!-- AI DETECTION TAB -->
+      <div class="ai-ethics-tab-panel ${activeTab === 'aidetect' ? 'active' : ''}" data-panel="aidetect">
+        <div class="ai-ethics-section">
+          <div class="ai-ethics-section-title">🔍 AI Presence Detection</div>
+          <p style="font-size: 11px; color: var(--theme-text-muted); margin-bottom: 8px;">
+            Scans this page for hidden AI assistants, chatbots, API calls, and AI-generated content.
+          </p>
+          <div id="ai-ethics-aidetect-content">
+            <p style="font-size: 11px; color: #888;">Click Re-scan to analyze this page.</p>
+          </div>
+          <button id="ai-ethics-rescan-btn" style="margin-top: 10px; width: 100%; padding: 8px; background: linear-gradient(135deg, #ff9800, #f44336); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">🔄 Re-scan Page</button>
         </div>
       </div>
       
@@ -1495,6 +1553,23 @@ export class UIManager {
     if (activeCOT) {
       this.setupCOTNodeToggles();
     }
+
+    // Wire up AI rescan button
+    const rescanBtn = this.sidebar.querySelector('#ai-ethics-rescan-btn');
+    if (rescanBtn) {
+      rescanBtn.addEventListener('click', () => {
+        import('../../shared/aiPresenceDetector').then(({ AIPresenceDetector }) => {
+          const report = AIPresenceDetector.scan();
+          this.displayAIPresenceReport(report);
+        });
+      });
+    }
+
+    // Wire up claim decomposition collapsibles
+    this.setupClaimToggles();
+
+    // Wire up prompt injection controls
+    this.setupPromptInjectionControls();
   }
 
   /**
@@ -1525,6 +1600,206 @@ export class UIManager {
         }
       });
     });
+  }
+
+  // ─── Claim Decomposition Rendering (Feature 2) ──────────────
+
+  /**
+   * Render claim decomposition results
+   */
+  private renderClaimDecomposition(claimData: any): string {
+    if (!claimData || !claimData.claims || claimData.claims.length === 0) {
+      return '<p style="color: #888; font-size: 11px;">No claims detected. Waiting for AI response...</p>';
+    }
+
+    const { claims, totalClaims, verifiableClaims, unverifiableClaims, flaggedClaims, overallReliability, summary } = claimData;
+
+    // Reliability color
+    const relColor = overallReliability > 70 ? '#4caf50' : overallReliability > 40 ? '#ff9800' : '#f44336';
+
+    // Header stats
+    let html = `
+      <div style="display: flex; justify-content: space-between; margin-bottom: 10px; gap: 6px;">
+        <div style="flex: 1; text-align: center; padding: 6px; background: rgba(0,212,255,0.08); border-radius: 6px;">
+          <div style="font-size: 16px; font-weight: 700; color: #00d4ff;">${totalClaims}</div>
+          <div style="font-size: 9px; color: #888;">Total</div>
+        </div>
+        <div style="flex: 1; text-align: center; padding: 6px; background: rgba(76,175,80,0.08); border-radius: 6px;">
+          <div style="font-size: 16px; font-weight: 700; color: #4caf50;">${verifiableClaims}</div>
+          <div style="font-size: 9px; color: #888;">Verifiable</div>
+        </div>
+        <div style="flex: 1; text-align: center; padding: 6px; background: rgba(255,152,0,0.08); border-radius: 6px;">
+          <div style="font-size: 16px; font-weight: 700; color: #ff9800;">${unverifiableClaims}</div>
+          <div style="font-size: 9px; color: #888;">Unverifiable</div>
+        </div>
+        <div style="flex: 1; text-align: center; padding: 6px; background: rgba(244,67,54,0.08); border-radius: 6px;">
+          <div style="font-size: 16px; font-weight: 700; color: #f44336;">${flaggedClaims}</div>
+          <div style="font-size: 9px; color: #888;">Flagged</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 10px; padding: 6px 10px; background: ${relColor}15; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 11px; color: #bbb;">Reliability Score</span>
+        <span style="font-size: 14px; font-weight: 700; color: ${relColor};">${overallReliability}%</span>
+      </div>
+
+      <p style="font-size: 10px; color: #888; margin-bottom: 10px;">${this.escapeHTMLSafe(summary)}</p>
+    `;
+
+    // Individual claims (collapsible)
+    const claimsToShow = claims.slice(0, 20); // Limit display
+    claimsToShow.forEach((claim: any) => {
+      const typeEmojis: Record<string, string> = {
+        factual: '📝', statistical: '📊', causal: '🔗', comparative: '⚖️',
+        opinion: '💭', definition: '📖', procedural: '📋', hedged: '🤔', absolute: '❗'
+      };
+      const emoji = typeEmojis[claim.type] || '•';
+      const borderColor = claim.flagged ? '#f44336' : claim.verifiable ? '#4caf50' : '#666';
+      const confPct = Math.round(claim.confidence * 100);
+
+      html += `
+        <div class="claim-card" style="margin-bottom: 6px; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 6px; border-left: 3px solid ${borderColor}; cursor: pointer;" data-claim-id="${claim.id}">
+          <div class="claim-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; color: #ddd; flex: 1;">${emoji} ${this.escapeHTMLSafe(claim.text.substring(0, 80))}${claim.text.length > 80 ? '...' : ''}</span>
+            <span style="font-size: 9px; padding: 1px 5px; border-radius: 3px; background: ${borderColor}20; color: ${borderColor}; white-space: nowrap; margin-left: 6px;">${claim.type}</span>
+          </div>
+          <div class="claim-body" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-size: 11px; color: #bbb; margin-bottom: 4px;">${this.escapeHTMLSafe(claim.text)}</div>
+            <div style="font-size: 10px; color: #888;">
+              <span>Confidence: ${confPct}%</span> · 
+              <span>${claim.verifiable ? '✅ Verifiable' : '❌ Not verifiable'}</span> · 
+              <span>${claim.category}</span>
+            </div>
+            ${claim.flagged ? `<div style="font-size: 10px; color: #f44336; margin-top: 4px;">⚠ ${this.escapeHTMLSafe(claim.flagReason || 'Flagged for review')}</div>` : ''}
+            <div style="font-size: 10px; color: #888; margin-top: 4px;">💡 ${this.escapeHTMLSafe(claim.verificationHint)}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    if (claims.length > 20) {
+      html += `<p style="font-size: 10px; color: #888; text-align: center;">...and ${claims.length - 20} more claims</p>`;
+    }
+
+    return html;
+  }
+
+  /**
+   * Wire up claim card expand/collapse
+   */
+  private setupClaimToggles(): void {
+    if (!this.sidebar) return;
+    const cards = this.sidebar.querySelectorAll('.claim-card');
+    cards.forEach(card => {
+      if ((card as any).__claimBound) return;
+      (card as any).__claimBound = true;
+
+      card.addEventListener('click', () => {
+        const body = card.querySelector('.claim-body') as HTMLElement;
+        if (body) {
+          body.style.display = body.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+    });
+  }
+
+  // ─── Structured Output Rendering (Feature 5) ────────────────
+
+  /**
+   * Render structured JSON output (if AI responded in JSON format)
+   */
+  private renderStructuredOutput(structuredOutput: any): string {
+    if (!structuredOutput) return '';
+
+    // Use the StructuredOutputParser's display method
+    try {
+      // Import inline to avoid circular dependency issues
+      const { StructuredOutputParser } = require('../../shared/structuredOutput');
+      return StructuredOutputParser.toDisplayHTML(structuredOutput);
+    } catch {
+      // Fallback: simple rendering
+      return `
+        <div style="font-weight: 600; font-size: 13px; color: #00d4ff; margin-bottom: 6px;">🧠 Structured Output Detected</div>
+        <pre style="font-size: 10px; color: #bbb; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap;">${JSON.stringify(structuredOutput, null, 2)}</pre>
+      `;
+    }
+  }
+
+  // ─── Prompt Injection Controls (Feature 1) ──────────────────
+
+  /**
+   * Render prompt injection toggle and profile selector
+   */
+  private renderPromptInjectionControls(): string {
+    try {
+      const { PromptInjector, INJECTION_PROFILES } = require('../../shared/promptInjector');
+      const enabled = PromptInjector.isEnabled();
+      const activeProfile = PromptInjector.getActiveProfile();
+
+      const profileOptions = INJECTION_PROFILES.map((p: any) => 
+        `<option value="${p.id}" ${p.id === activeProfile.id ? 'selected' : ''}>${p.name} — ${p.description}</option>`
+      ).join('');
+
+      return `
+        <div style="margin-bottom: 10px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: #ddd;">
+            <input type="checkbox" id="ai-ethics-prompt-inject-toggle" ${enabled ? 'checked' : ''} 
+                   style="width: 16px; height: 16px; accent-color: #00d4ff;">
+            Enable CoT Prompt Injection
+          </label>
+          <p style="font-size: 10px; color: #888; margin: 4px 0 0 24px;">
+            Silently appends reasoning instructions to your prompts before sending.
+          </p>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 11px; color: #bbb; display: block; margin-bottom: 4px;">Injection Profile</label>
+          <select id="ai-ethics-prompt-profile" style="width: 100%; padding: 6px 8px; background: rgba(255,255,255,0.08); color: #ddd; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; font-size: 11px;">
+            ${profileOptions}
+          </select>
+        </div>
+        <div style="font-size: 10px; color: #666; padding: 6px; background: rgba(255,255,255,0.03); border-radius: 4px;">
+          <strong style="color: #888;">Active:</strong> ${this.escapeHTMLSafe(activeProfile.name)}<br>
+          <em>${this.escapeHTMLSafe(activeProfile.description)}</em>
+        </div>
+      `;
+    } catch {
+      return '<p style="color: #888; font-size: 11px;">Prompt injection module not available.</p>';
+    }
+  }
+
+  /**
+   * Wire up prompt injection UI controls
+   */
+  private setupPromptInjectionControls(): void {
+    if (!this.sidebar) return;
+
+    const toggle = this.sidebar.querySelector('#ai-ethics-prompt-inject-toggle') as HTMLInputElement;
+    const profileSelect = this.sidebar.querySelector('#ai-ethics-prompt-profile') as HTMLSelectElement;
+
+    if (toggle) {
+      toggle.addEventListener('change', () => {
+        import('../../shared/promptInjector').then(({ PromptInjector }) => {
+          PromptInjector.setEnabled(toggle.checked);
+        });
+      });
+    }
+
+    if (profileSelect) {
+      profileSelect.addEventListener('change', () => {
+        import('../../shared/promptInjector').then(({ PromptInjector }) => {
+          PromptInjector.setProfile(profileSelect.value);
+        });
+      });
+    }
+  }
+
+  /**
+   * Safe HTML escaping helper
+   */
+  private escapeHTMLSafe(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   /**

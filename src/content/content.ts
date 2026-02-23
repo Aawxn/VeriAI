@@ -1,6 +1,7 @@
 /**
- * Content script entry point for AI Ethics Monitor
- * Initializes platform detection and monitoring
+ * Content script entry point for VeriAI — AI Ethics Monitor
+ * Initializes platform detection, monitoring, and AI presence scanning.
+ * Now runs on ALL websites (manifest <all_urls>).
  */
 
 import { detectPlatform } from '../shared/utils';
@@ -11,6 +12,10 @@ import { UIManager } from './ui/UIManager';
 import { biasDetector } from '../shared/biasDetection';
 import { NLPBiasDetector } from '../shared/nlpBiasDetector';
 import { ChainOfThoughtExtractor } from '../shared/chainOfThoughtExtractor';
+import { ClaimDecomposer } from '../shared/claimDecomposer';
+import { PromptInjector } from '../shared/promptInjector';
+import { StructuredOutputParser } from '../shared/structuredOutput';
+import { AIPresenceDetector } from '../shared/aiPresenceDetector';
 
 class ContentScriptManager {
   private platform: SupportedPlatform;
@@ -76,25 +81,43 @@ class ContentScriptManager {
       // Initialize UI components
       await this.uiManager.initialize();
       console.log('✓ UI Manager initialized');
+
+      // ─── AI Presence Detection (runs on ALL sites) ───
+      // Only run full detection on non-known-platform sites
+      if (!AIPresenceDetector.isKnownPlatform()) {
+        AIPresenceDetector.startNetworkMonitoring();
+        // Delay scan to let page finish loading
+        setTimeout(() => {
+          const report = AIPresenceDetector.scan();
+          console.log(`🔍 AI Presence scan: ${report.detections.length} detection(s)`);
+          this.uiManager.displayAIPresenceReport(report);
+        }, 2000);
+      }
+
+      // ─── Prompt Injection Setup ───
+      PromptInjector.interceptPromptSubmission(this.platform);
+      console.log('✓ Prompt injector attached');
       
       // Show sidebar immediately
       this.uiManager.showSidebar();
       console.log('✓ Sidebar shown');
       
-      // Show test analysis immediately
-      console.log('⏰ Triggering test analysis...');
-      await this.showTestAnalysis();
-      console.log('✅ Test analysis should be displayed');
+      // Show test analysis immediately (only on known AI platforms)
+      if (this.platform !== 'generic') {
+        console.log('⏰ Triggering test analysis...');
+        await this.showTestAnalysis();
+        console.log('✅ Test analysis should be displayed');
+      }
       
       // Start monitoring
       this.startMonitoring();
       console.log('✓ Monitoring started');
       
       this.isInitialized = true;
-      console.log(`✅ AI Ethics Monitor fully initialized for platform: ${this.platform}`);
+      console.log(`✅ VeriAI fully initialized for platform: ${this.platform}`);
       
     } catch (error) {
-      console.error('❌ Failed to initialize AI Ethics Monitor:', error);
+      console.error('❌ Failed to initialize VeriAI:', error);
       if (error instanceof Error) {
         console.error('Error details:', error.message, error.stack);
       }
@@ -245,6 +268,12 @@ class ContentScriptManager {
     try {
       console.log('🔍 Processing AI response:', response.content.substring(0, 100) + '...');
       
+      // ─── Try structured JSON parsing first (Feature 5) ───
+      const structuredOutput = StructuredOutputParser.parse(response.content);
+      if (structuredOutput) {
+        console.log(`✓ Structured JSON output parsed: ${structuredOutput.reasoning_steps.length} steps`);
+      }
+
       // Extract chain of thought using the advanced extractor
       console.log('🧠 Extracting chain of thought...');
       const chainOfThought = ChainOfThoughtExtractor.extract(
@@ -253,6 +282,11 @@ class ContentScriptManager {
       );
       console.log(`✓ Extracted ${chainOfThought.steps.length} reasoning steps`);
       
+      // ─── Claim Decomposition (Feature 2) ───
+      console.log('🔬 Decomposing claims...');
+      const claimDecomposition = ClaimDecomposer.decompose(response.content);
+      console.log(`✓ ${claimDecomposition.totalClaims} claims extracted, ${claimDecomposition.flaggedClaims} flagged`);
+
       // Perform keyword-based bias analysis
       console.log('🔍 Analyzing for bias (keyword-based)...');
       const biasAnalysis = await this.performBiasAnalysis(response.content);
@@ -269,7 +303,9 @@ class ContentScriptManager {
         response,
         chainOfThought,
         biasAnalysis,
-        nlpBiasAnalysis
+        nlpBiasAnalysis,
+        claimDecomposition,
+        structuredOutput
       });
       console.log('✅ Analysis displayed successfully');
       
@@ -280,7 +316,8 @@ class ContentScriptManager {
           response,
           chainOfThought,
           biasAnalysis,
-          nlpBiasAnalysis
+          nlpBiasAnalysis,
+          claimDecomposition
         },
         sender: 'content',
         timestamp: new Date()
@@ -370,6 +407,14 @@ In conclusion, the key takeaway is that you should carefully evaluate all factor
       this.platform
     );
     console.log('Chain of thought extracted:', testChainOfThought);
+
+    // Run claim decomposition on test content
+    console.log('Decomposing claims from test content...');
+    const testClaimDecomposition = ClaimDecomposer.decompose(testResponse.content);
+    console.log('Claim decomposition complete:', testClaimDecomposition);
+
+    // Try structured output parsing
+    const testStructuredOutput = StructuredOutputParser.parse(testResponse.content);
     
     // Run real bias analysis on the test content
     console.log('Running bias analysis on test content...');
@@ -386,7 +431,9 @@ In conclusion, the key takeaway is that you should carefully evaluate all factor
       response: testResponse,
       chainOfThought: testChainOfThought,
       biasAnalysis: testBiasAnalysis,
-      nlpBiasAnalysis: testNLPBiasAnalysis
+      nlpBiasAnalysis: testNLPBiasAnalysis,
+      claimDecomposition: testClaimDecomposition,
+      structuredOutput: testStructuredOutput
     });
   }
 }
@@ -395,7 +442,7 @@ In conclusion, the key takeaway is that you should carefully evaluate all factor
 (function() {
   'use strict';
   
-  console.log('%c🧠 AI Ethics Monitor Extension Loaded!', 'background: #00d4ff; color: white; padding: 5px 10px; border-radius: 3px; font-weight: bold;');
+  console.log('%c🧠 VeriAI Extension Loaded!', 'background: #00d4ff; color: white; padding: 5px 10px; border-radius: 3px; font-weight: bold;');
   console.log('URL:', window.location.href);
   console.log('Timestamp:', new Date().toISOString());
   

@@ -233,3 +233,29 @@ export interface CrossAIVerificationResult {
   modelResponses: Record<string, ModelResponse>;
   timestamp: Date;
 }
+
+// ─── Prompt Injection types ──────────────────────────────────
+
+export interface PromptInjectionConfig {
+  enabled: boolean;
+  profileId: string;
+}
+
+// ─── Claim Decomposition types ───────────────────────────────
+
+export type ClaimType = 
+  | 'factual' | 'statistical' | 'causal' | 'comparative'
+  | 'opinion' | 'definition' | 'procedural' | 'hedged' | 'absolute';
+
+export type ClaimCategory = 
+  | 'science' | 'history' | 'technology' | 'health'
+  | 'politics' | 'economics' | 'general' | 'legal' | 'ethics';
+
+// ─── AI Presence Detection types ─────────────────────────────
+
+export type AIDetectionSeverity = 'info' | 'warning' | 'danger';
+
+export type DetectionType =
+  | 'chat_widget' | 'ai_api_call' | 'ai_sdk_script'
+  | 'ai_generated_content' | 'hidden_iframe' | 'ai_meta_tag'
+  | 'websocket_ai' | 'shadow_dom_widget';
